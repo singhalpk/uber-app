@@ -3,6 +3,8 @@ import Modal from 'react-awesome-modal';
 import load from './load.gif';
 import './App.css';
 
+const googlemaps = window.google.maps;
+
 class App extends Component {
 
   constructor(props) {
@@ -29,23 +31,22 @@ class App extends Component {
     }
 
   componentDidMount(){
-        var map = new window.google.maps.Map(document.getElementById('map'), {
+        var map = new googlemaps.Map(document.getElementById('mymap'), {
           center: {lat: -33.8688, lng: 151.2195},
           zoom: 13,
           mapTypeId: 'roadmap'
         });
 
          if ("geolocation" in navigator){
-    navigator.geolocation.getCurrentPosition(function(position){
-      var currentLatitude = position.coords.latitude;
-      var currentLongitude = position.coords.longitude;
-
-      var infoWindowHTML = "Latitude: " + currentLatitude + "<br>Longitude: " + currentLongitude;
-      var infoWindow = new window.google.maps.InfoWindow({map: map, content: infoWindowHTML});
-      var currentLocation = { lat: currentLatitude, lng: currentLongitude };
-      infoWindow.setPosition(currentLocation);
-    });
-  }
+          navigator.geolocation.getCurrentPosition( (position) =>{
+            var currentLatitude = position.coords.latitude;
+            var currentLongitude = position.coords.longitude;
+            var infoWindowHTML = "Latitude: " + currentLatitude + "<br>Longitude: " + currentLongitude;
+            var infoWindow = new googlemaps.InfoWindow({map: map, content: infoWindowHTML});
+            var currentLocation = { lat: currentLatitude, lng: currentLongitude };
+            infoWindow.setPosition(currentLocation);
+          });
+        }
 
       }
 
@@ -109,7 +110,7 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <div id="map" style={{height:"400px"}}></div>
+        <div id="mymap" style={{height:"400px"}}></div>
         <input type="text" className="col-md-11 form-control m-3 ml-5" id="from-input" onChange={this.fromPlace} placeholder="Pick up location" />
         <input type="text" className="col-md-11 form-control m-3 ml-5" id="to-input" onChange={this.toPlace} placeholder="Drop off locaton" />
         <button type="button" className="btn btn-primary m-3" onClick={this.onSubmit}>Book Ride</button>
