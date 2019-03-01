@@ -2,15 +2,19 @@ import React, { Component } from 'react';
 import Modal from 'react-awesome-modal';
 import load from './load.gif';
 import './App.css';
-const google = window.google;
 
 class App extends Component {
 
   constructor(props) {
         super(props);
-        this.  state = {
+        this.state = {
               address1: "",
               address2:"",
+              lat1: 0,
+              long1: 0,
+              lat2: 0,
+              long2: 0,
+              fare: 0,
               toload: false,
               visible : false
             }
@@ -24,84 +28,76 @@ class App extends Component {
         });
     }
 
-  handleChange =(e)=>{
-       this.setState({[e.target.name]: e.target.value})
-  }
-
   componentDidMount(){
-        var infoWindow;
-        var map = new google.maps.Map(document.getElementById('map'), {
+        var map = new window.google.maps.Map(document.getElementById('map'), {
           center: {lat: -33.8688, lng: 151.2195},
           zoom: 13,
           mapTypeId: 'roadmap'
         });
 
-        infoWindow = new google.maps.InfoWindow;
+         if ("geolocation" in navigator){
+    navigator.geolocation.getCurrentPosition(function(position){
+      var currentLatitude = position.coords.latitude;
+      var currentLongitude = position.coords.longitude;
 
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(function(position) {
-            var pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-
-            infoWindow.setPosition(pos);
-            infoWindow.setContent("Your Location");
-            infoWindow.open(map);
-            map.setCenter(pos);
-
-          }, function() {
-             infoWindow.setPosition(map.getCenter());
-              infoWindow.setContent(true ?
-                                    'Error: The Geolocation service failed.' :
-                                    'Error: Your browser doesn\'t support geolocation.');
-              infoWindow.open(map);
-          });
-        } else {
-             infoWindow.setPosition(map.getCenter());
-              infoWindow.setContent(false ?
-                                    'Error: The Geolocation service failed.' :
-                                    'Error: Your browser doesn\'t support geolocation.');
-              infoWindow.open(map);
-        }
-      
+      var infoWindowHTML = "Latitude: " + currentLatitude + "<br>Longitude: " + currentLongitude;
+      var infoWindow = new window.google.maps.InfoWindow({map: map, content: infoWindowHTML});
+      var currentLocation = { lat: currentLatitude, lng: currentLongitude };
+      infoWindow.setPosition(currentLocation);
+    });
+  }
 
       }
 
 
       fromPlace =()=>{
         var input = document.getElementById('from-input');
-        var searchBox = new google.maps.places.SearchBox(input);
-         searchBox.addListener('places_changed', () => {
-          var places = searchBox.getPlaces();
-          console.log(places);
-          this.setState({address1: places[0].name});
+        var autocomplete = new window.google.maps.places.Autocomplete(input);
+        window.google.maps.event.addListener(autocomplete, 'place_changed',  () =>  {
+            var place = autocomplete.getPlace();
+            this.setState({address1: place.name});
+            this.setState({lat1: place.geometry.location.lat()});
+            this.setState({long1: place.geometry.location.lng()});
+            console.log(place);
+
         });
       }
 
 
       toPlace =()=>{
         var input = document.getElementById('to-input');
-        var searchBox = new google.maps.places.SearchBox(input);
-        searchBox.addListener('places_changed', () => {
-          var places = searchBox.getPlaces();
-          this.setState({address2: places[0].name});
+        var autocomplete = new window.google.maps.places.Autocomplete(input);
+        window.google.maps.event.addListener(autocomplete, 'place_changed',  () =>  {
+            var place = autocomplete.getPlace();
+            this.setState({address2: place.name});
+            this.setState({lat2: place.geometry.location.lat()});
+            this.setState({long2: place.geometry.location.lng()});
+            console.log(place);
         });
       }
 
+      toRad = (Value) => {
+        return Value * Math.PI / 180;
+      }
+
       onSubmit =()=>{
+        const {lat1, lat2,long1,long2 } = this.state;
        if (this.state.address2 !== "" && this.state.address1 !== "") {
-         this.setState({toload: true});
-        this.setState({
-            visible : true
-        });
-        setTimeout(
-              function() {
-                  this.setState({toload: false}) 
-              }
-              .bind(this),
-              3000
-          );
+          var a = Math.sin(this.toRad(lat2-lat1)/2) * Math.sin(this.toRad(lat2-lat1)/2) 
+                  + Math.sin(this.toRad(long2-long1)/2) * Math.sin(this.toRad(long2-long1)/2) * Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)); 
+          var b = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+          var d = 6371 * b;
+          console.log(d);
+          this.setState({fare: (11*d).toFixed(1)});
+          this.setState({toload: true});
+          this.setState({visible : true});
+          setTimeout(
+                function() {
+                    this.setState({toload: false}) 
+                }
+                .bind(this),
+                3000
+            );
        }
        else{
         alert("Please provide locations")
@@ -114,10 +110,10 @@ class App extends Component {
     return (
       <div className="App">
         <div id="map" style={{height:"400px"}}></div>
-        <input type="text" className="form-control m-3" id="from-input" onChange={this.fromPlace} placeholder="Pick up location" />
-        <input type="text" className="form-control m-3" id="to-input" onChange={this.toPlace} placeholder="Drop off locaton" />
+        <input type="text" className="col-md-11 form-control m-3 ml-5" id="from-input" onChange={this.fromPlace} placeholder="Pick up location" />
+        <input type="text" className="col-md-11 form-control m-3 ml-5" id="to-input" onChange={this.toPlace} placeholder="Drop off locaton" />
         <button type="button" className="btn btn-primary m-3" onClick={this.onSubmit}>Book Ride</button>
-         <Modal visible={this.state.visible} width="400" height="400" effect="fadeInUp" onClickAway={() => this.closeModal()}>
+         <Modal visible={this.state.visible} width="400" height="350" effect="fadeInUp" onClickAway={() => this.closeModal()}>
                     <div>
                        {this.state.toload?<img src={load} alt=""/>:
                           <div>
@@ -137,7 +133,7 @@ class App extends Component {
                                 Drop Off Location:
                               </div>
                               <div className="col-md-6">
-                              {this.state.address1}
+                              {this.state.address2}
                               </div>
                             </div>
                             <hr />
@@ -146,7 +142,7 @@ class App extends Component {
                                 Fare:
                               </div>
                               <div className="col-md-6">
-                                  128.36/-
+                                  {this.state.fare}/-
                               </div>
                             </div>
                           </div>}
